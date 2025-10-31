@@ -32,6 +32,16 @@ class MainActivity : AppCompatActivity() {
         previewView = findViewById(R.id.preview_view)
         glSurfaceView = findViewById(R.id.gl_surface_view)
 
+        findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(R.id.fab).setOnClickListener {
+            if (previewView.visibility == View.VISIBLE) {
+                previewView.visibility = View.GONE
+                glSurfaceView.visibility = View.VISIBLE
+            } else {
+                previewView.visibility = View.VISIBLE
+                glSurfaceView.visibility = View.GONE
+            }
+        }
+
         if (allPermissionsGranted()) {
             startCamera()
         } else {
