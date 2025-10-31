@@ -1,91 +1,46 @@
-# Edge Detection Viewer 📱🔍
+# Edge Detection Viewer
 
-A real-time edge detection Android application built for a technical assessment. This project uses the device's camera to capture a video feed, processes each frame in real-time using native C++ and OpenCV to detect edges, and displays the result on the screen using OpenGL ES. It also includes a simple companion web viewer built with TypeScript.
+This project is a real-time edge detection application for Android, which streams the processed video feed to a web viewer over WebSockets.
 
-## ✅ Implemented Features
+## Features
 
-### Core Android App
-- **Real-time Camera Feed**: Utilizes **CameraX** for efficient and modern camera operations.
-- **Native C++ Processing**: A **JNI bridge** passes camera frames to a native C++ layer for high-performance processing.
-- **OpenCV for Edge Detection**: Implements **Canny edge detection** using the OpenCV library in C++.
-- **OpenGL ES 2.0 Rendering**: A custom renderer displays the processed video feed on a `GLSurfaceView`, with GLSL shaders managing the final output.
-- **(Bonus) Toggle Functionality**: A `FloatingActionButton` allows the user to instantly switch between the raw camera feed and the edge-detected view.
+*   **Real-time Edge Detection**: Uses the device's camera to capture video, processes each frame with OpenCV's Canny edge detector in native C++ code.
+*   **OpenGL ES Rendering**: Renders the processed frames with edge detection in a `GLSurfaceView`.
+*   **Web Viewer**: A simple TypeScript-based web application that connects to the Android app via a WebSocket and displays the live processed feed.
+*   **View Toggle**: A Floating Action Button to switch between the live camera preview and the processed edge detection view.
+
+## Project Structure
+
+The project is divided into several modules:
+
+*   `/app`: The main Android application module, containing the `MainActivity`, CameraX setup, WebSocket server, and UI layouts.
+*   `/jni`: The native C++ module.
+    *   `src/main/cpp/edge_detection.cpp`: Contains the JNI bridge and the OpenCV implementation for edge detection.
+    *   `src/main/cpp/CMakeLists.txt`: The build script for the native library, which also handles downloading and linking OpenCV.
+*   `/gl`: A module for the OpenGL ES rendering logic.
+    *   `src/main/java/com/example/edgedetectionviewer/GLSurfaceView.kt`: The `GLSurfaceView` and `GLRenderer` implementation.
+    *   `src/main/res/raw`: Contains the GLSL vertex and fragment shaders.
+*   `/web`: The web viewer application.
+    *   `src/index.ts`: The main TypeScript file that handles the WebSocket connection and renders the video frames on a canvas.
+    *   `webpack.config.js`: Webpack configuration for building the web app.
+
+## How to Build and Run
+
+### Android App
+
+1.  Open the project in Android Studio.
+2.  The project is configured to automatically download the required OpenCV for Android SDK via CMake if it's not found.
+3.  Build and run the `app` module on an Android device.
+4.  The app will request camera permissions. Once granted, it will start the camera and the WebSocket server on port `8080`.
 
 ### Web Viewer
-- **TypeScript & Webpack**: A simple web interface built with TypeScript and bundled using Webpack.
-- **Sample Image Display**: Demonstrates how a processed frame could be displayed on a web client, including a button to load a sample image.
 
-## 📷 Screenshots & Demo
+1.  Navigate to the `web` directory in your terminal.
+2.  Install the dependencies: `npm install`
+3.  Start the development server: `npm start`
+4.  Open a web browser and go to `http://localhost:9000`.
+5.  Ensure the Android device and the computer running the web viewer are on the same network. The web viewer will attempt to connect to the WebSocket server running on the Android device. You may need to find the IP address of your Android device and update the WebSocket URL in `web/src/index.ts`.
 
-*It is highly recommended to add a GIF or screenshots here to demonstrate the final application.*
+## Commit History
 
-**Example:**
-
-| Raw Camera View | Edge Detection View |
-| :---: | :---: |
-| *[Insert Screenshot of Raw View]* | *[Insert Screenshot of Edge-Detected View]* |
-
-## ⚙️ Setup and Build Instructions
-
-### Prerequisites
-- Android Studio (latest stable version recommended)
-- Android NDK and CMake (installable via SDK Manager in Android Studio)
-- Node.js and npm (for the web viewer)
-
-### Building and Running the Project
-
-1.  **Clone the Repository**:
-    ```bash
-    git clone https://github.com/antima121-bit/EdgeDetectionViewer-.git
-    cd EdgeDetectionViewer-
-    ```
-
-2.  **Configure OpenCV (if needed)**:
-    This project is configured to automatically download and link a pre-built OpenCV library via the `c:\Users\Kuldeep Mishra\Flam\EdgeDetectionViewer\jni\src\main\cpp\CMakeLists.txt` file. No manual OpenCV setup is required.
-
-3.  **Build and Run the Android App**:
-    - Open the `EdgeDetectionViewer` project in Android Studio.
-    - Let Gradle sync and download all dependencies.
-    - Connect an Android device or start an emulator.
-    - Click the "Run" button (▶️) in Android Studio.
-
-4.  **Build and Run the Web Viewer**:
-    ```bash
-    cd web
-    npm install
-    npm run build
-    ```
-    After building, open the `web/dist/index.html` file in a web browser to see the viewer.
-
-## 🧠 Architecture Overview
-
-The application follows a clean, modular architecture that separates concerns between the UI, camera handling, native processing, and rendering.
-
-### Data Flow
-1.  **Camera Capture**: `MainActivity.kt` uses the **CameraX API**. An `ImageAnalysis` use case provides a stream of frames.
-2.  **JNI Bridge**: For each frame, the `ImageAnalysis.Analyzer` calls the native function `processFrame` defined in `edge_detection.cpp`, passing the image data.
-3.  **Native Processing**: The C++ code converts the incoming byte array into an `cv::Mat`, performs a grayscale conversion, and applies the `cv::Canny` algorithm.
-4.  **Return to Kotlin**: The processed `cv::Mat` (as a byte array) is returned to the Kotlin layer.
-5.  **OpenGL Rendering**: The `GLSurfaceView.kt` receives the processed data. Its `EdgeDetectionRenderer` uploads this data into a GL texture and renders it onto a simple quad that fills the view.
-
-### Component Interaction
-```
-[CameraX ImageAnalysis] → [MainActivity.kt] → [JNI: edge_detection.cpp] → [OpenCV Canny] ↘
-                                                                                     [GLSurfaceView.kt] ← [MainActivity.kt]
-```
-
-## 🔄 Development Workflow & Git Strategy
-
-The project was developed with a clear, feature-based commit history as required.
-
-- **Commit Message Format**: Conventional Commits standard was used (e.g., `feat:`, `fix:`, `docs:`).
-- **Branching**: All work was done on the `master` branch.
-- **History**: The commit history was carefully managed to ensure it is clean, atomic, and correctly attributed.
-
-## 📝 License
-
-This project is unlicensed and free to use.
-
-## 🤝 Acknowledgment
-
-This project was completed with the assistance of GitHub Copilot to accelerate development and explore best practices in Android, NDK, and OpenGL integration.
+The Git commit history for this project has been structured to reflect the development process, with each major feature implemented in a separate, descriptive commit.
