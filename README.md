@@ -14,15 +14,24 @@ This project is a real-time edge detection application for Android, which stream
 The project is divided into several modules:
 
 *   `/app`: The main Android application module, containing the `MainActivity`, CameraX setup, WebSocket server, and UI layouts.
+  
 *   `/jni`: The native C++ module.
     *   `src/main/cpp/edge_detection.cpp`: Contains the JNI bridge and the OpenCV implementation for edge detection.
     *   `src/main/cpp/CMakeLists.txt`: The build script for the native library, which also handles downloading and linking OpenCV.
+      
 *   `/gl`: A module for the OpenGL ES rendering logic.
     *   `src/main/java/com/example/edgedetectionviewer/GLSurfaceView.kt`: The `GLSurfaceView` and `GLRenderer` implementation.
     *   `src/main/res/raw`: Contains the GLSL vertex and fragment shaders.
+      
 *   `/web`: The web viewer application.
     *   `src/index.ts`: The main TypeScript file that handles the WebSocket connection and renders the video frames on a canvas.
     *   `webpack.config.js`: Webpack configuration for building the web app.
+      
+## Preview
+<img width="1024" height="1024" alt="flam11-Photoroom" src="https://github.com/user-attachments/assets/71d336c5-0388-4e66-af6a-f35eb7cf7b43" />
+<img width="1024" height="1024" alt="flam2-Photoroom" src="https://github.com/user-attachments/assets/3114ddd8-4bcc-4524-a75f-2f3f69570381" />
+<img width="1024" height="1024" alt="flam3-Photoroom" src="https://github.com/user-attachments/assets/1913206b-ac85-4f6e-ac5b-ed17c743f0df" />
+<img width="1024" height="1024" alt="flam4-Photoroom" src="https://github.com/user-attachments/assets/96b6acae-06f8-46d9-9777-302d6132c92b" />
 
 ## How to Build and Run
 
