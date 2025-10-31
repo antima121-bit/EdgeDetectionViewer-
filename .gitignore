@@ -1,18 +1,27 @@
-# Gradle
+# Added by Android Studio / Gradle
 .gradle
-build/
-!gradle/wrapper/gradle-wrapper.jar
-
-# Local configuration
-local.properties
-
-# IDE files
-.idea/
-*.iml
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+build
+/captures
 .DS_Store
+/app/build
+*.iml
 
-# node.js
-/web/node_modules
+# C++ / NDK
+.cxx/
+cmake-build-debug/
+.externalNativeBuild/
+
+# Web
 /web/dist
-npm-debug.log
-yarn-error.log
+/web/node_modules
+
+# Misc
+*.hprof
+*.log
