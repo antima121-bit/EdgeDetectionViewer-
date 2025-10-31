@@ -23,6 +23,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var glSurfaceView: EdgeGLSurfaceView
     private lateinit var outputBuffer: ByteBuffer
     private lateinit var outputBitmap: Bitmap
+    private val webSocketServer = WebSocketServer()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,6 +41,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         cameraExecutor = Executors.newSingleThreadExecutor()
+        webSocketServer.start()
     }
 
     private fun startCamera() {
@@ -79,6 +81,10 @@ class MainActivity : AppCompatActivity() {
                         outputBuffer.rewind()
                         outputBitmap.copyPixelsFromBuffer(outputBuffer)
                         glSurfaceView.updateTexture(outputBitmap)
+
+                        lifecycleScope.launch {
+                            webSocketServer.broadcast(outputBitmap)
+                        }
 
                         image.close()
                     })
@@ -142,5 +148,6 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         cameraExecutor.shutdown()
+        webSocketServer.stop()
     }
 }
