@@ -2,33 +2,34 @@ package com.example.edgedetectionviewer
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
-import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.example.edgedetectionviewer.databinding.ActivityMainBinding
+import java.nio.ByteBuffer
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 class MainActivity : AppCompatActivity() {
-
-    private lateinit var binding: ActivityMainBinding
     private lateinit var cameraExecutor: ExecutorService
-    private lateinit var glSurfaceView: com.example.edgedetectionviewer.GLSurfaceView
-    private var isEdgeDetectionEnabled = true
+    private lateinit var previewView: PreviewView
+    private lateinit var glSurfaceView: EdgeGLSurfaceView
+    private lateinit var outputBuffer: ByteBuffer
+    private lateinit var outputBitmap: Bitmap
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+        setContentView(R.layout.activity_main)
 
-        // The GLSurfaceView is in a different module, so we need to cast it
-        glSurfaceView = binding.glSurfaceView as com.example.edgedetectionviewer.GLSurfaceView
+        previewView = findViewById(R.id.preview_view)
+        glSurfaceView = findViewById(R.id.gl_surface_view)
 
         if (allPermissionsGranted()) {
             startCamera()
@@ -36,10 +37,6 @@ class MainActivity : AppCompatActivity() {
             ActivityCompat.requestPermissions(
                 this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS
             )
-        }
-
-        binding.toggleButton.setOnClickListener {
-            isEdgeDetectionEnabled = !isEdgeDetectionEnabled
         }
 
         cameraExecutor = Executors.newSingleThreadExecutor()
@@ -54,37 +51,43 @@ class MainActivity : AppCompatActivity() {
             val preview = Preview.Builder()
                 .build()
                 .also {
-                    it.setSurfaceProvider(binding.previewView.surfaceProvider)
+                    it.setSurfaceProvider(previewView.surfaceProvider)
                 }
 
             val imageAnalyzer = ImageAnalysis.Builder()
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .build()
                 .also {
-                    it.setAnalyzer(cameraExecutor) { image ->
-                        val rotationDegrees = image.imageInfo.rotationDegrees
-                        val buffer = image.planes[0].buffer
-                        val data = ByteArray(buffer.remaining())
-                        buffer.get(data)
-
-                        val processedData = if (isEdgeDetectionEnabled) {
-                            processFrame(data, image.width, image.height)
-                        } else {
-                            data
+                    it.setAnalyzer(cameraExecutor, { image ->
+                        if (!::outputBuffer.isInitialized) {
+                            outputBuffer = ByteBuffer.allocateDirect(image.width * image.height * 4)
+                            outputBitmap = Bitmap.createBitmap(image.width, image.height, Bitmap.Config.ARGB_8888)
                         }
-                        
-                        glSurfaceView.updateTexture(processedData, image.width, image.height)
+
+                        processFrame(
+                            image.width,
+                            image.height,
+                            image.planes[0].buffer,
+                            image.planes[1].buffer,
+                            image.planes[2].buffer,
+                            image.planes[0].rowStride,
+                            image.planes[1].pixelStride,
+                            image.planes[2].rowStride,
+                            outputBuffer
+                        )
+
+                        outputBuffer.rewind()
+                        outputBitmap.copyPixelsFromBuffer(outputBuffer)
+                        glSurfaceView.updateTexture(outputBitmap)
 
                         image.close()
-                    }
+                    })
                 }
-
-            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
             try {
                 cameraProvider.unbindAll()
                 cameraProvider.bindToLifecycle(
-                    this, cameraSelector, preview, imageAnalyzer
+                    this, CameraSelector.DEFAULT_BACK_CAMERA, preview, imageAnalyzer
                 )
             } catch (exc: Exception) {
                 Log.e(TAG, "Use case binding failed", exc)
@@ -93,39 +96,51 @@ class MainActivity : AppCompatActivity() {
         }, ContextCompat.getMainExecutor(this))
     }
 
+    override fun onRequestPermissionsResult(
+        requestCode: Int, permissions: Array<String>, grantResults:
+        IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_CODE_PERMISSIONS) {
+            if (allPermissionsGranted()) {
+                startCamera()
+            }
+        }
+    }
+
     private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
         ContextCompat.checkSelfPermission(
             baseContext, it
         ) == PackageManager.PERMISSION_GRANTED
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int, permissions: Array<String>, grantResults:
-        IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == REQUEST_CODE_PERMISSIONS) {
-            if (allPermissionsGranted()) {
-                startCamera()
-            } else {
-                Log.e(TAG, "Permissions not granted by the user.")
-                finish()
-            }
+    private external fun processFrame(
+        width: Int,
+        height: Int,
+        yBuffer: ByteBuffer,
+        uBuffer: ByteBuffer,
+        vBuffer: ByteBuffer,
+        yRowStride: Int,
+        uvPixelStride: Int,
+        uvRowStride: Int,
+        output: ByteBuffer
+    )
+
+    companion object {
+        private const val TAG = "EdgeDetectionViewer"
+        private const val REQUEST_CODE_PERMISSIONS = 10
+        private val REQUIRED_PERMISSIONS =
+            mutableListOf(
+                Manifest.permission.CAMERA
+            ).toTypedArray()
+
+        init {
+            System.loadLibrary("edge-detection")
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
         cameraExecutor.shutdown()
-    }
-
-    external fun processFrame(data: ByteArray, width: Int, height: Int): ByteArray
-
-    companion object {
-        private const val TAG = "EdgeDetectionViewer"
-        private const val REQUEST_CODE_PERMISSIONS = 10
-        private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
-        init {
-            System.loadLibrary("edge-detection")
-        }
     }
 }
